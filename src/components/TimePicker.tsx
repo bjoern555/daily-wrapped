@@ -20,6 +20,7 @@ import {
     CardDescription,
     CardContent
 } from "@/components/ui/card"
+import {Label} from "@/components/ui/label.tsx";
 
 export function TimePicker() {
     const [hour, setHour] = useState<string>()
@@ -55,8 +56,15 @@ export function TimePicker() {
                     <CardTitle className={enabled ? "" : "opacity-50"}>
                         ⏰ Daily Summary
                     </CardTitle>
-                    <Switch checked={enabled} onCheckedChange={setEnabled} />
+
+                    <div className="flex items-center gap-2">
+                        <Label htmlFor="enabled" className="text-sm text-muted-foreground">
+                            Notification
+                        </Label>
+                        <Switch id="enabled" checked={enabled} onCheckedChange={setEnabled} />
+                    </div>
                 </div>
+
                 <CardDescription className={enabled ? "" : "opacity-50"}>
                     Choose the time for your daily wrapped.
                 </CardDescription>
