@@ -20,15 +20,17 @@ import {
     CardDescription,
     CardContent
 } from "@/components/ui/card"
-import {Label} from "@/components/ui/label.tsx";
+import { Label } from "@/components/ui/label.tsx"
 
 export function TimePicker() {
-    const [hour, setHour] = useState<string>()
-    const [minute, setMinute] = useState<string>()
+    const [hour, setHour] = useState<string>("")
+    const [minute, setMinute] = useState<string>("")
     const [enabled, setEnabled] = useState<boolean>(true)
+    const [isLoaded, setIsLoaded] = useState<boolean>(false)
 
     const selected = hour && minute ? `${hour}:${minute}` : "Select Time"
 
+    // Load initial values from Chrome storage
     useEffect(() => {
         chrome.storage.local.get(["dailyReminderEnabled", "dailyReminderTime"], (result) => {
             if (result.dailyReminderEnabled !== undefined) {
@@ -36,18 +38,26 @@ export function TimePicker() {
             }
             if (result.dailyReminderTime) {
                 const [h, m] = result.dailyReminderTime.split(":")
-                setHour(h)
-                setMinute(m)
+                setHour(h ? h.padStart(2, "0") : "")
+                setMinute(m ? m.padStart(2, "0") : "")
             }
+            setIsLoaded(true)
         })
     }, [])
 
+    // Save to Chrome storage only after initial load
     useEffect(() => {
+        if (!isLoaded) return
+
+        const timeValue = hour && minute ? `${hour}:${minute}` : undefined
+
         chrome.storage.local.set({
             dailyReminderEnabled: enabled,
-            dailyReminderTime: hour && minute ? `${hour}:${minute}` : undefined
+            dailyReminderTime: timeValue
+        }, () => {
+            console.log('TimePicker: Settings saved -', { enabled, time: timeValue })
         })
-    }, [enabled, hour, minute])
+    }, [enabled, hour, minute, isLoaded])
 
     return (
         <Card>

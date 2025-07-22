@@ -3,7 +3,7 @@
   "name": "Daily Wrapped",
   "description": "Your browser activity, beautifully wrapped.",
   "version": "0.1",
-  "permissions": ["storage", "tabs", "activeTab", "scripting", "alarms"],
+  "permissions": ["storage", "tabs", "activeTab", "scripting", "alarms", "notifications"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
