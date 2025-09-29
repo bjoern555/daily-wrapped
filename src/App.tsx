@@ -2,36 +2,64 @@ import {useEffect, useState} from "react"
 import {TimePicker} from "@/components/TimePicker"
 import {Switch} from "@/components/ui/switch"
 import {Label} from "@/components/ui/label"
+import {TodaysActivity} from "@/components/TodaysActivity.tsx";
 
 export type LogEntry = {
-    title: string
     url: string
-    time: string
+    domain: string
+    startTime: string
+    durationSeconds?: number
+    sessionCount?: number
+    clicks?: number
 }
 
 export default function App() {
-    //const [logs, setLogs] = useState<LogEntry[]>([])
+    const [logs, setLogs] = useState<LogEntry[]>([])
     const [isDark, setIsDark] = useState(true)
 
     useEffect(() => {
-        // chrome.storage.local.get(["dailywrapped"], (result) => {
-        //     setLogs(result.dailywrapped || [])
-        // })
-
-        const stored = localStorage.getItem("theme")
-        if (stored === "light") setIsDark(false)
-        else document.documentElement.classList.add("dark")
+        document.documentElement.classList.add("dark")
     }, [])
 
     const toggleTheme = (checked: boolean) => {
         setIsDark(checked)
         if (checked) {
             document.documentElement.classList.add("dark")
-            localStorage.setItem("theme", "dark")
         } else {
             document.documentElement.classList.remove("dark")
-            localStorage.setItem("theme", "light")
         }
+    }
+
+    const loadLogs = () => {
+        chrome.storage.local.get(["dailywrapped"], (result) => {
+            const allLogs: LogEntry[] = result.dailywrapped || []
+            const today = new Date().toDateString()
+
+            const filtered = allLogs.filter(entry =>
+                new Date(entry.startTime).toDateString() === today
+            )
+
+            setLogs(filtered)
+        })
+    }
+
+    useEffect(() => {
+        loadLogs()
+        const handleStorageChange = (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>, namespace: string) => {
+            if (namespace === 'local' && changes.dailywrapped) {
+                loadLogs()
+            }
+        }
+
+        chrome.storage.onChanged.addListener(handleStorageChange)
+        return () => chrome.storage.onChanged.removeListener(handleStorageChange)
+    }, [])
+
+    const formatDuration = (seconds?: number) => {
+        if (!seconds || isNaN(seconds) || seconds < 0) return "0 sec"
+        const m = Math.floor(seconds / 60)
+        const s = seconds % 60
+        return m > 0 ? `${m} min ${s} sec` : `${s} sec`
     }
 
     return (
@@ -40,14 +68,13 @@ export default function App() {
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-lg font-bold">🌅 Daily Wrapped</h1>
                     <div className="flex items-center space-x-2">
-                        <Label htmlFor="dark-mode" className="text-xs">
-                            Dark Mode
-                        </Label>
+                        <Label htmlFor="dark-mode" className="text-xs">Dark Mode</Label>
                         <Switch id="dark-mode" checked={isDark} onCheckedChange={toggleTheme}/>
                     </div>
                 </div>
 
                 <TimePicker/>
+                <TodaysActivity logs={logs} formatDuration={formatDuration}/>
             </div>
         </div>
     )
