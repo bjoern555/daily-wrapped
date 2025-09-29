@@ -3,9 +3,9 @@ import {TimePicker} from "@/components/TimePicker"
 import {Switch} from "@/components/ui/switch"
 import {Label} from "@/components/ui/label"
 import {TodaysActivity} from "@/components/TodaysActivity.tsx";
+import {Button} from "@/components/ui/button.tsx";
 
 export type LogEntry = {
-    url: string
     domain: string
     startTime: string
     durationSeconds?: number
@@ -45,7 +45,10 @@ export default function App() {
 
     useEffect(() => {
         loadLogs()
-        const handleStorageChange = (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>, namespace: string) => {
+        const handleStorageChange = (changes: Record<string, {
+            newValue?: unknown;
+            oldValue?: unknown
+        }>, namespace: string) => {
             if (namespace === 'local' && changes.dailywrapped) {
                 loadLogs()
             }
@@ -74,6 +77,25 @@ export default function App() {
                 </div>
 
                 <TimePicker/>
+
+                <Button
+                    className="mt-4 px-3 py-1 bg-red-600 text-white rounded"
+                    onClick={() => {
+                        const today = new Date().toDateString()
+                        chrome.storage.local.get(["dailywrapped"], (result) => {
+                            const allLogs: LogEntry[] = result.dailywrapped || []
+                            const filtered = allLogs.filter(entry =>
+                                new Date(entry.startTime).toDateString() !== today
+                            )
+                            chrome.storage.local.set({dailywrapped: filtered}, () => {
+                                setLogs([])
+                            })
+                        })
+                    }}
+                >
+                    Delete Statistics
+                </Button>
+
                 <TodaysActivity logs={logs} formatDuration={formatDuration}/>
             </div>
         </div>

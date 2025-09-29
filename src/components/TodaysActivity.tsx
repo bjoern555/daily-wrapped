@@ -14,9 +14,8 @@ export function TodaysActivity({ logs, formatDuration }: Props) {
             ) : (
                 <ul className="space-y-2">
                     {logs.map((log) => (
-                        <li key={log.url} className="border border-muted rounded p-2 text-sm space-y-1">
+                        <li key={log.domain} className="border border-muted rounded p-2 text-sm space-y-1">
                             <div className="font-medium truncate">{log.domain}</div>
-                            <div className="text-muted-foreground text-xs truncate">{log.url}</div>
                             {log.durationSeconds !== undefined && (
                                 <div className="text-muted-foreground text-xs">
                                     ⏱ {formatDuration(log.durationSeconds)}

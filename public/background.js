@@ -14,25 +14,12 @@ chrome.runtime.onStartup.addListener(() => {
 
 let currentTabId = null
 let currentStartTime = null
-
-// Listen for tab activation
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-    await handleTabSwitch(activeInfo.tabId)
-})
-
-// Listen for tab updates
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && tab.active) {
-        await handleTabSwitch(tabId)
-    }
-})
+let currentDomain = null
 
 async function handleTabSwitch(tabId) {
     const now = new Date()
     try {
         const tab = await chrome.tabs.get(tabId)
-        if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) return
-
         const domain = (() => {
             try {
                 return new URL(tab.url).hostname
@@ -42,6 +29,10 @@ async function handleTabSwitch(tabId) {
         })()
 
         await closePreviousSession(now)
+
+        currentTabId = tabId
+        currentStartTime = now
+        currentDomain = domain
 
         const result = await chrome.storage.local.get(["dailywrapped"])
         const logs = result.dailywrapped || []
@@ -54,7 +45,6 @@ async function handleTabSwitch(tabId) {
         } else {
             entry = {
                 domain,
-                url: tab.url,
                 startTime: now.toISOString(),
                 durationSeconds: 0,
                 sessionCount: 1,
@@ -63,30 +53,38 @@ async function handleTabSwitch(tabId) {
             logs.push(entry)
         }
 
-        await chrome.storage.local.set({ dailywrapped: logs })
-
-        currentTabId = tabId
-        currentStartTime = now
+        await chrome.storage.local.set({dailywrapped: logs})
     } catch (error) {
         console.error("Error saving tab switch:", error)
     }
 }
 
 async function closePreviousSession(now) {
+    if (!currentStartTime || !currentDomain) return
     try {
         const result = await chrome.storage.local.get(["dailywrapped"])
         const logs = result.dailywrapped || []
-        const lastEntry = logs[logs.length - 1]
-
-        if (lastEntry && currentStartTime) {
+        const today = new Date().toDateString()
+        let entry = logs.find(e => new Date(e.startTime).toDateString() === today && e.domain === currentDomain)
+        if (entry) {
             const duration = Math.round((now - currentStartTime) / 1000)
-            lastEntry.durationSeconds = (lastEntry.durationSeconds || 0) + duration
-            await chrome.storage.local.set({ dailywrapped: logs })
+            entry.durationSeconds = (entry.durationSeconds || 0) + duration
+            await chrome.storage.local.set({dailywrapped: logs})
         }
     } catch (error) {
         console.error("Error closing session:", error)
     }
 }
+
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    await handleTabSwitch(activeInfo.tabId)
+})
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' && tab.active) {
+        await handleTabSwitch(tabId)
+    }
+})
 
 chrome.runtime.onSuspend.addListener(async () => {
     if (currentTabId && currentStartTime) {
@@ -98,7 +96,7 @@ function resetDailyLogIfNeeded() {
     const today = new Date().toDateString()
     chrome.storage.local.get(["lastLogDate", "dailywrapped"], (result) => {
         if (result.lastLogDate !== today) {
-            chrome.storage.local.set({ dailywrapped: [], lastLogDate: today }, () => {
+            chrome.storage.local.set({dailywrapped: [], lastLogDate: today}, () => {
                 console.log("New day detected. Log reset.")
             })
         }
@@ -164,7 +162,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 chrome.notifications.onClicked.addListener((notificationId) => {
     if (notificationId === "dailyWrappedNotification") {
-        chrome.tabs.create({ url: chrome.runtime.getURL("popup.html") })
+        chrome.tabs.create({url: chrome.runtime.getURL("popup.html")})
         chrome.notifications.clear(notificationId)
     }
 })
