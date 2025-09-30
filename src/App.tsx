@@ -11,6 +11,7 @@ export type LogEntry = {
     durationSeconds?: number
     sessionCount?: number
     clicks?: number
+    iconUrl?: string
 }
 
 export default function App() {

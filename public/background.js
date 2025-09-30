@@ -48,7 +48,8 @@ async function handleTabSwitch(tabId) {
                 startTime: now.toISOString(),
                 durationSeconds: 0,
                 sessionCount: 1,
-                clicks: 0
+                clicks: 0,
+                iconUrl: tab.favIconUrl || ""
             }
             logs.push(entry)
         }
