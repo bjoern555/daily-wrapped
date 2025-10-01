@@ -1,4 +1,5 @@
 import type { LogEntry } from "@/App"
+import {useTranslation} from "react-i18next";
 
 type Props = {
     readonly logs: ReadonlyArray<LogEntry>
@@ -6,11 +7,13 @@ type Props = {
 }
 
 export function TodaysActivity({ logs, formatDuration }: Props) {
+    const { t } = useTranslation()
+
     return (
         <div className="mt-6 space-y-2">
-            <h2 className="text-sm font-semibold text-muted-foreground">Today's Activity</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground">{t("todaysActivity")}</h2>
             {logs.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No activity yet.</p>
+                <p className="text-xs text-muted-foreground">{t("noActivity")}</p>
             ) : (
                 <ul className="space-y-2">
                     {logs.map((log) => (
@@ -27,12 +30,12 @@ export function TodaysActivity({ logs, formatDuration }: Props) {
                                 )}
                                 {log.sessionCount !== undefined && (
                                     <div className="text-muted-foreground text-xs">
-                                        🔁 {log.sessionCount} visits
+                                        🔁 {log.sessionCount} {t("visits")}
                                     </div>
                                 )}
                                 {log.clicks !== undefined && (
                                     <div className="text-muted-foreground text-xs">
-                                        🖱️ {log.clicks} clicks
+                                        🖱️ {log.clicks} {t("clicks")}
                                     </div>
                                 )}
                             </div>

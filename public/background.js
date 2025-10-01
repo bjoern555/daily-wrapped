@@ -1,5 +1,12 @@
 // background.js
 
+import {useTranslation} from "react-i18next";
+
+let currentTabId = null
+let currentStartTime = null
+let currentDomain = null
+const { t } = useTranslation()
+
 chrome.runtime.onInstalled.addListener(() => {
     console.log("Daily Wrapped background loaded.")
     setupDailyReminder()
@@ -11,10 +18,6 @@ chrome.runtime.onStartup.addListener(() => {
     setupDailyReminder()
     resetDailyLogIfNeeded()
 })
-
-let currentTabId = null
-let currentStartTime = null
-let currentDomain = null
 
 async function handleTabSwitch(tabId) {
     const now = new Date()
@@ -153,8 +156,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
             chrome.notifications.create("dailyWrappedNotification", {
                 type: "basic",
                 iconUrl: "icons/icon128.png",
-                title: "Your Daily Wrapped is ready! 🎉",
-                message: "Click to view your browser summary for today.",
+                title: t("notificationTitle"),
+                message: t("notificationMessage"),
                 priority: 2
             })
         })
