@@ -4,7 +4,8 @@ import {Switch} from "@/components/ui/switch"
 import {Label} from "@/components/ui/label"
 import {TodaysActivity} from "@/components/TodaysActivity.tsx";
 import {Button} from "@/components/ui/button.tsx";
-import { useTranslation } from "react-i18next";
+import {useTranslation} from "react-i18next";
+import {LanguageSwitcher} from "@/components/LanguageSwitcher.tsx";
 
 export type LogEntry = {
     domain: string
@@ -18,7 +19,7 @@ export type LogEntry = {
 export default function App() {
     const [logs, setLogs] = useState<LogEntry[]>([])
     const [isDark, setIsDark] = useState(true)
-    const { t } = useTranslation()
+    const {t} = useTranslation()
 
     useEffect(() => {
         document.documentElement.classList.add("dark")
@@ -69,7 +70,8 @@ export default function App() {
     }
 
     return (
-        <div className="w-full min-h-screen bg-background text-foreground flex items-start justify-center p-4">
+        <div
+            className="w-full min-h-screen bg-background text-foreground flex items-start justify-center p-4 overflow-hidden">
             <div className="w-[360px] p-4 bg-background text-foreground">
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-lg font-bold">{t('title')}</h1>
@@ -77,7 +79,9 @@ export default function App() {
                         <Label htmlFor="dark-mode" className="text-xs">{t('darkmode')}</Label>
                         <Switch id="dark-mode" checked={isDark} onCheckedChange={toggleTheme}/>
                     </div>
+                    <LanguageSwitcher/>
                 </div>
+
 
                 <TimePicker/>
 

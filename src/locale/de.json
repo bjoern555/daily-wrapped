@@ -1,0 +1,19 @@
+{
+  "translation": {
+    "title": "\uD83C\uDF05 Daily Wrapped",
+    "darkmode": "Dark Mode",
+    "min": "min",
+    "sec": "sek",
+    "dailySummary": "⏰ Tägliche Zusammenfassung",
+    "notification": "Benachrichtigung",
+    "chooseTime": "Wähle die Uhrzeit für dein tägliches Wrapped.",
+    "time": "Zeit",
+    "todaysActivity": "Heutige Aktivität",
+    "visits": "Besuche",
+    "clicks": "Klicks",
+    "notificationTitle": "Dein Daily Wrapped ist bereit! 🎉",
+    "notificationMessage": "Klicke, um deine Browser-Zusammenfassung für heute zu sehen.",
+    "noActivity": "Noch keine Aktivität.",
+    "deleteStatistics": "Statistiken löschen"
+  }
+}
