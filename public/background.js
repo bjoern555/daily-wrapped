@@ -1,5 +1,25 @@
 // background.js
 
+let currentTabId = null
+let currentStartTime = null
+let currentDomain = null
+
+// Storage mutex to prevent race conditions
+let storageQueue = Promise.resolve()
+
+async function withStorageLock(fn) {
+    const prevQueue = storageQueue
+    let resolve
+    storageQueue = new Promise(r => resolve = r)
+
+    await prevQueue
+    try {
+        return await fn()
+    } finally {
+        resolve()
+    }
+}
+
 chrome.runtime.onInstalled.addListener(() => {
     console.log("Daily Wrapped background loaded.")
     setupDailyReminder()
@@ -11,10 +31,6 @@ chrome.runtime.onStartup.addListener(() => {
     setupDailyReminder()
     resetDailyLogIfNeeded()
 })
-
-let currentTabId = null
-let currentStartTime = null
-let currentDomain = null
 
 async function handleTabSwitch(tabId) {
     const now = new Date()
@@ -28,52 +44,52 @@ async function handleTabSwitch(tabId) {
             }
         })()
 
-        await closePreviousSession(now)
+        const prevDomain = currentDomain
+        const prevStartTime = currentStartTime
 
         currentTabId = tabId
         currentStartTime = now
         currentDomain = domain
 
-        const result = await chrome.storage.local.get(["dailywrapped"])
-        const logs = result.dailywrapped || []
-        const today = new Date().toDateString()
+        await withStorageLock(async () => {
+            const result = await chrome.storage.local.get(["dailywrapped"])
+            const logs = result.dailywrapped || []
+            const today = new Date().toDateString()
 
-        let entry = logs.find(e => new Date(e.startTime).toDateString() === today && e.domain === domain)
-
-        if (entry) {
-            entry.sessionCount = (entry.sessionCount || 1) + 1
-        } else {
-            entry = {
-                domain,
-                startTime: now.toISOString(),
-                durationSeconds: 0,
-                sessionCount: 1,
-                clicks: 0,
-                iconUrl: tab.favIconUrl || ""
+            // Close previous session
+            if (prevStartTime && prevDomain) {
+                const prevEntry = logs.find(e =>
+                    new Date(e.startTime).toDateString() === today && e.domain === prevDomain
+                )
+                if (prevEntry) {
+                    const duration = Math.round((now - prevStartTime) / 1000)
+                    prevEntry.durationSeconds = (prevEntry.durationSeconds || 0) + duration
+                }
             }
-            logs.push(entry)
-        }
 
-        await chrome.storage.local.set({dailywrapped: logs})
+            // Open new session
+            let entry = logs.find(e =>
+                new Date(e.startTime).toDateString() === today && e.domain === domain
+            )
+
+            if (entry) {
+                entry.sessionCount = (entry.sessionCount || 1) + 1
+            } else {
+                entry = {
+                    domain,
+                    startTime: now.toISOString(),
+                    durationSeconds: 0,
+                    sessionCount: 1,
+                    clicks: 0,
+                    iconUrl: tab.favIconUrl || ""
+                }
+                logs.push(entry)
+            }
+
+            await chrome.storage.local.set({ dailywrapped: logs })
+        })
     } catch (error) {
         console.error("Error saving tab switch:", error)
-    }
-}
-
-async function closePreviousSession(now) {
-    if (!currentStartTime || !currentDomain) return
-    try {
-        const result = await chrome.storage.local.get(["dailywrapped"])
-        const logs = result.dailywrapped || []
-        const today = new Date().toDateString()
-        let entry = logs.find(e => new Date(e.startTime).toDateString() === today && e.domain === currentDomain)
-        if (entry) {
-            const duration = Math.round((now - currentStartTime) / 1000)
-            entry.durationSeconds = (entry.durationSeconds || 0) + duration
-            await chrome.storage.local.set({dailywrapped: logs})
-        }
-    } catch (error) {
-        console.error("Error closing session:", error)
     }
 }
 
@@ -88,8 +104,21 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 })
 
 chrome.runtime.onSuspend.addListener(async () => {
-    if (currentTabId && currentStartTime) {
-        await closePreviousSession(new Date())
+    if (currentTabId && currentStartTime && currentDomain) {
+        const now = new Date()
+        await withStorageLock(async () => {
+            const result = await chrome.storage.local.get(["dailywrapped"])
+            const logs = result.dailywrapped || []
+            const today = new Date().toDateString()
+            const entry = logs.find(e =>
+                new Date(e.startTime).toDateString() === today && e.domain === currentDomain
+            )
+            if (entry) {
+                const duration = Math.round((now - currentStartTime) / 1000)
+                entry.durationSeconds = (entry.durationSeconds || 0) + duration
+                await chrome.storage.local.set({ dailywrapped: logs })
+            }
+        })
     }
 })
 
@@ -153,8 +182,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
             chrome.notifications.create("dailyWrappedNotification", {
                 type: "basic",
                 iconUrl: "icons/icon128.png",
-                title: "Your Daily Wrapped is ready! 🎉",
-                message: "Click to view your browser summary for today.",
+                title: "Daily Wrapped",
+                message: "Check out your daily browsing summary!",
                 priority: 2
             })
         })
@@ -167,3 +196,36 @@ chrome.notifications.onClicked.addListener((notificationId) => {
         chrome.notifications.clear(notificationId)
     }
 })
+
+// Handle click increment messages from content script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'INCREMENT_CLICKS') {
+        handleClickIncrement(message.domain, message.count).then(() => {
+            sendResponse({ success: true })
+        }).catch((error) => {
+            console.error("Error handling click increment:", error)
+            sendResponse({ success: false })
+        })
+        return true // Required for async sendResponse
+    }
+})
+
+async function handleClickIncrement(domain, count) {
+    if (!domain || !count || count <= 0) return
+
+    await withStorageLock(async () => {
+        const result = await chrome.storage.local.get(["dailywrapped"])
+        const logs = result.dailywrapped || []
+        const today = new Date().toDateString()
+
+        const entry = logs.find(e =>
+            new Date(e.startTime).toDateString() === today && e.domain === domain
+        )
+
+        if (entry) {
+            entry.clicks = (entry.clicks || 0) + count
+            await chrome.storage.local.set({ dailywrapped: logs })
+            console.log(`[DailyWrapped] Updated clicks for ${domain}: ${entry.clicks}`)
+        }
+    })
+}

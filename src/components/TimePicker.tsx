@@ -4,10 +4,12 @@ import {Card, CardHeader, CardTitle, CardDescription, CardContent} from "@/compo
 import {Label} from "@/components/ui/label"
 import {Switch} from "@/components/ui/switch"
 import {Input} from "@/components/ui/input"
+import {useTranslation} from "react-i18next";
 
 export function TimePicker() {
     const [enabled, setEnabled] = React.useState(true)
     const [time, setTime] = React.useState("")
+    const { t } = useTranslation()
 
     React.useEffect(() => {
         chrome.storage.local.get(["dailyReminderEnabled", "dailyReminderTime"], (result) => {
@@ -31,11 +33,11 @@ export function TimePicker() {
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                     <CardTitle className={enabled ? "" : "opacity-50"}>
-                        ⏰ Daily Summary
+                        {t("dailySummary")}
                     </CardTitle>
                     <div className="flex items-center gap-2">
                         <Label htmlFor="enabled" className="text-sm text-muted-foreground">
-                            Notification
+                            {t("notification")}
                         </Label>
                         <Switch
                             id="enabled"
@@ -45,13 +47,13 @@ export function TimePicker() {
                     </div>
                 </div>
                 <CardDescription className={enabled ? "" : "opacity-50"}>
-                    Choose the time for your daily wrapped.
+                    {t("chooseTime")}
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className={!enabled ? "opacity-50 pointer-events-none select-none" : ""}>
                     <Label htmlFor="time-picker" className="px-1">
-                        Time
+                        {t("time")}
                     </Label>
                     <Input
                         type="time"
